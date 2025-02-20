@@ -7,6 +7,7 @@ interface ScoreDisplayProps {
   onOpenChange: (open: boolean) => void;
   score: number;
   accuracy: number;
+  message?: string;
 }
 
 const ScoreDisplay = ({
@@ -14,6 +15,7 @@ const ScoreDisplay = ({
   onOpenChange,
   score = 85,
   accuracy = 90,
+  message = "Boa performance!",
 }: ScoreDisplayProps) => {
   const [autoClose, setAutoClose] = useState<NodeJS.Timeout>();
 
@@ -40,28 +42,45 @@ const ScoreDisplay = ({
               exit={{ scale: 0.8, opacity: 0 }}
               className="text-center p-6"
             >
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ type: "spring", duration: 0.8 }}
+                className="text-8xl mb-6"
+              >
+                {score >= 90
+                  ? "🌟"
+                  : score >= 80
+                    ? "🎉"
+                    : score >= 70
+                      ? "🎵"
+                      : score >= 60
+                        ? "👏"
+                        : "💪"}
+              </motion.div>
               <motion.h2
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
-                className="text-4xl font-bold text-primary mb-4"
+                transition={{ delay: 0.3 }}
+                className="text-6xl font-bold text-primary mb-4"
               >
-                Score: {score}
+                {score}
               </motion.h2>
               <motion.div
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.2 }}
-                className="text-2xl text-white mb-4"
+                transition={{ delay: 0.5 }}
+                className="text-2xl text-white mb-6"
               >
-                Accuracy: {accuracy}%
+                {message}
               </motion.div>
               <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ delay: 0.4, type: "spring" }}
-                className="text-6xl mb-4"
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.7 }}
+                className="text-xl text-muted-foreground"
               >
-                {score >= 90 ? "🌟" : score >= 70 ? "👏" : "👍"}
+                Precisão: {accuracy}%
               </motion.div>
             </motion.div>
           )}

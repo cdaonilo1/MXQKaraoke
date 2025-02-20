@@ -32,7 +32,11 @@ const Home = () => {
     },
   });
   const [showScore, setShowScore] = useState(false);
-  const [currentScore, setCurrentScore] = useState({ score: 0, accuracy: 0 });
+  const [currentScore, setCurrentScore] = useState({
+    score: 0,
+    accuracy: 0,
+    message: "",
+  });
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentSong, setCurrentSong] = useState<{
     code: string;
@@ -41,9 +45,26 @@ const Home = () => {
     videoPath: string;
     firstLyric: string;
   } | null>(null);
+
+  const [typedSong, setTypedSong] = useState<{
+    code: string;
+    title: string;
+    artist: string;
+  } | null>(null);
+
+  const [songQueue, setSongQueue] = useState<
+    {
+      id: string;
+      code: string;
+      title: string;
+      artist: string;
+      videoPath: string;
+      firstLyric: string;
+    }[]
+  >([]);
   const [showNoCreditsMessage, setShowNoCreditsMessage] = useState(false);
 
-  const handleSongSubmit = async (code: string) => {
+  const handleSongSubmit = async (code: string, addToQueue = false) => {
     if (credits < settings.credits.costPerSong) {
       setShowNoCreditsMessage(true);
       setTimeout(() => setShowNoCreditsMessage(false), 3000);
@@ -52,26 +73,24 @@ const Home = () => {
 
     const song = await readSongFromDb(code);
     if (song) {
-      setCurrentSong(song);
       setCredits((prev) => prev - settings.credits.costPerSong);
-      setIsPlaying(true);
 
-      // Simulate song ending after 10 seconds (in real app, this would be triggered by video end)
-      const videoElement = document.querySelector("video");
-      if (videoElement) {
-        videoElement.onended = () => {
-          setShowScore(true);
-          setCurrentScore({
-            score: Math.floor(Math.random() * 30) + 70,
-            accuracy: Math.floor(Math.random() * 20) + 80,
-          });
-          setTimeout(() => {
-            setShowScore(false);
-            setCurrentSong(null);
-            setIsPlaying(false);
-          }, 6000);
-        };
+      if (addToQueue && currentSong) {
+        setSongQueue((prev) => [
+          ...prev,
+          { ...song, id: Math.random().toString() },
+        ]);
+      } else if (currentSong) {
+        setSongQueue((prev) => [
+          { ...song, id: Math.random().toString() },
+          ...prev,
+        ]);
+      } else {
+        setCurrentSong(song);
+        setIsPlaying(true);
       }
+
+      // Score handling moved to VideoPlayer onEnded prop
     }
   };
 
@@ -93,20 +112,81 @@ const Home = () => {
   };
 
   return (
-    <div className="min-h-screen w-full bg-black relative overflow-hidden">
+    <div className="min-h-screen w-full bg-[#1a2942] relative overflow-hidden">
       <ParticleBackground />
 
       {/* Version and Credits */}
-      <div className="absolute top-4 left-4 text-yellow-500 text-sm">v3.0</div>
-      <div className="absolute top-4 right-4 flex items-center gap-2">
+      <div className="absolute top-4 left-4 text-yellow-500 text-sm">v1.1</div>
+      <div className="absolute top-4 right-4 flex items-center gap-2 bg-black/40 rounded-lg px-3 py-1">
         <div className="text-yellow-500">💰</div>
         <div className="text-yellow-500 text-xl font-bold">{credits}</div>
       </div>
 
       {/* Centered Numeric Input */}
       <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-        <NumericInput onSubmit={handleSongSubmit} />
+        <NumericInput
+          onSubmit={(code) => handleSongSubmit(code, false)}
+          onChange={async (value) => {
+            if (value.length === 5) {
+              const song = await readSongFromDb(value);
+              if (song) {
+                setTypedSong({
+                  code: song.code,
+                  title: song.title,
+                  artist: song.artist,
+                });
+              }
+            } else {
+              setTypedSong(null);
+            }
+          }}
+        />
       </div>
+
+      {/* Bottom Info Bar for Typed Song */}
+      <div className="fixed bottom-0 left-0 right-0 bg-black py-3 grid grid-cols-3 text-white">
+        <div className="border-r border-gray-800 px-4">
+          <div className="text-gray-500 text-sm mb-1">CÓDIGO</div>
+          <div className="text-xl">{typedSong ? typedSong.code : "1234"}</div>
+        </div>
+        <div className="border-r border-gray-800 px-4">
+          <div className="text-gray-500 text-sm mb-1">CANTOR:</div>
+          <div className="text-xl">
+            {typedSong ? typedSong.artist : "Unknown Artist"}
+          </div>
+        </div>
+        <div className="px-4">
+          <div className="text-gray-500 text-sm mb-1">MUSICA:</div>
+          <div className="text-xl">
+            {typedSong ? typedSong.title : "Untitled Song"}
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom Right Queue Input */}
+      {currentSong && (
+        <div className="fixed bottom-24 right-4 z-10">
+          <NumericInput
+            onSubmit={(code) => handleSongSubmit(code, true)}
+            size="small"
+            placeholder="Add to queue..."
+          />
+        </div>
+      )}
+
+      {/* Queue Display */}
+      <QueueDisplay
+        queue={songQueue.map((song) => ({
+          id: song.id,
+          code: song.code,
+          title: song.title,
+          artist: song.artist,
+        }))}
+        onRemoveItem={(id) => {
+          setSongQueue((prev) => prev.filter((song) => song.id !== id));
+          setCredits((prev) => prev + settings.credits.costPerSong);
+        }}
+      />
 
       {/* Info Bar at the bottom */}
       {currentSong && (
@@ -115,6 +195,42 @@ const Home = () => {
             videoUrl={currentSong.videoPath}
             isPlaying={isPlaying}
             onPlayPause={handlePlayPause}
+            onEnded={() => {
+              const score = Math.floor(Math.random() * 101);
+              let message = "";
+
+              if (score >= 90) {
+                message = "Incrível! Você é uma estrela! 🌟";
+              } else if (score >= 80) {
+                message = "Fantástico! Você arrasou! 🎉";
+              } else if (score >= 70) {
+                message = "Muito bom! Continue assim! 🎵";
+              } else if (score >= 60) {
+                message = "Boa performance! 👏";
+              } else {
+                message = "Continue praticando! 💪";
+              }
+
+              setShowScore(true);
+              setCurrentScore({
+                score,
+                accuracy: Math.floor(Math.random() * 20) + 80,
+                message,
+              });
+
+              setTimeout(() => {
+                setShowScore(false);
+                if (songQueue.length > 0) {
+                  const [nextSong, ...remainingQueue] = songQueue;
+                  setCurrentSong(nextSong);
+                  setSongQueue(remainingQueue);
+                  setIsPlaying(true);
+                } else {
+                  setCurrentSong(null);
+                  setIsPlaying(false);
+                }
+              }, 6000);
+            }}
           />
           <InfoBar
             songCode={currentSong.code}
@@ -168,6 +284,7 @@ const Home = () => {
         onOpenChange={setShowScore}
         score={currentScore.score}
         accuracy={currentScore.accuracy}
+        message={currentScore.message}
       />
     </div>
   );
