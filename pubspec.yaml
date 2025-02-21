@@ -1,5 +1,6 @@
 name: tvbox_karaoke
 description: Professional Karaoke App for TV Box Systems
+publish_to: 'none'
 version: 1.0.0+1
 
 environment:
