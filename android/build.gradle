@@ -29,5 +29,3 @@ subprojects {
 tasks.register("clean", Delete) {
     delete rootProject.buildDir
 }
-
-apply from: "$flutterRoot/packages/flutter_tools/gradle/app_plugin_loader.gradle"
