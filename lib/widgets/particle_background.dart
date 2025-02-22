@@ -2,7 +2,14 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 
 class ParticleBackground extends StatefulWidget {
-  const ParticleBackground({super.key});
+  final Color color;
+  final int particleCount;
+
+  const ParticleBackground({
+    Key? key,
+    this.color = const Color(0x80FFFFFF),
+    this.particleCount = 50,
+  }) : super(key: key);
 
   @override
   State<ParticleBackground> createState() => _ParticleBackgroundState();
@@ -10,101 +17,105 @@ class ParticleBackground extends StatefulWidget {
 
 class _ParticleBackgroundState extends State<ParticleBackground>
     with TickerProviderStateMixin {
-  final List<ParticleModel> particles = [];
-  final int particleCount = 50;
-  late AnimationController controller;
+  late List<ParticleData> particles;
+  late List<AnimationController> controllers;
 
   @override
   void initState() {
     super.initState();
-    
-    // Initialize particles
-    for (int i = 0; i < particleCount; i++) {
-      particles.add(ParticleModel());
-    }
+    _initializeParticles();
+  }
 
-    // Setup animation
-    controller = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 10),
-    )..addListener(() {
-        for (var particle in particles) {
-          particle.update();
-        }
-        setState(() {});
-      });
+  void _initializeParticles() {
+    final random = Random();
+    particles = List.generate(
+      widget.particleCount,
+      (i) => ParticleData(
+        id: i,
+        x: random.nextDouble() * 100,
+        y: random.nextDouble() * 100,
+        size: random.nextDouble() * 3 + 1,
+      ),
+    );
 
-    controller.repeat();
+    controllers = particles.map((particle) {
+      return AnimationController(
+        duration: Duration(seconds: random.nextInt(10) + 10),
+        vsync: this,
+      )
+        ..forward()
+        ..addListener(() {
+          if (mounted) setState(() {});
+        })
+        ..addStatusListener((status) {
+          if (status == AnimationStatus.completed) {
+            controllers[particle.id].reverse();
+          } else if (status == AnimationStatus.dismissed) {
+            controllers[particle.id].forward();
+          }
+        });
+    }).toList();
   }
 
   @override
   void dispose() {
-    controller.dispose();
+    for (var controller in controllers) {
+      controller.dispose();
+    }
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(
-      painter: ParticlePainter(particles),
-      child: const SizedBox.expand(),
+    return Container(
+      color: Colors.black,
+      child: Stack(
+        children: particles.map((particle) {
+          final animation = controllers[particle.id];
+          final position = Tween(
+            begin: Offset(particle.x, particle.y),
+            end: Offset(
+              particle.x + (Random().nextDouble() * 100 - 50),
+              particle.y + (Random().nextDouble() * 100 - 50),
+            ),
+          ).animate(animation);
+
+          final opacity = Tween(
+            begin: 0.3,
+            end: 0.7,
+          ).animate(animation);
+
+          return Positioned(
+            left: position.value.dx,
+            top: position.value.dy,
+            child: Opacity(
+              opacity: opacity.value,
+              child: Container(
+                width: particle.size,
+                height: particle.size,
+                decoration: BoxDecoration(
+                  color: widget.color,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
     );
   }
 }
 
-class ParticleModel {
-  late double x;
-  late double y;
-  late double speed;
-  late double theta;
-  late double size;
+class ParticleData {
+  final int id;
+  final double x;
+  final double y;
+  final double size;
 
-  final random = Random();
-
-  ParticleModel() {
-    reset();
-    x = random.nextDouble() * 100;
-    y = random.nextDouble() * 100;
-  }
-
-  void reset() {
-    x = random.nextDouble() * 100;
-    y = random.nextDouble() * 100;
-    speed = random.nextDouble() * 0.3 + 0.1;
-    theta = random.nextDouble() * 2 * pi;
-    size = random.nextDouble() * 2 + 1;
-  }
-
-  void update() {
-    x += speed * cos(theta);
-    y += speed * sin(theta);
-
-    if (x < 0 || x > 100 || y < 0 || y > 100) {
-      reset();
-    }
-  }
-}
-
-class ParticlePainter extends CustomPainter {
-  final List<ParticleModel> particles;
-
-  ParticlePainter(this.particles);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.white.withOpacity(0.5)
-      ..style = PaintingStyle.fill;
-
-    for (var particle in particles) {
-      final position = Offset(
-        particle.x * size.width / 100,
-        particle.y * size.height / 100,
-      );
-      canvas.drawCircle(position, particle.size, paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(ParticlePainter oldDelegate) => true;
+  ParticleData({
+    required this.id,
+    required this.x,
+    required this.y,
+    required this.size,
+  });
 }

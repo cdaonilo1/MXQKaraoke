@@ -1,170 +1,191 @@
 import 'package:flutter/material.dart';
 
 class NumericKeypad extends StatefulWidget {
-  final Function(String) onSubmit;
+  final Function(String)? onSubmit;
+  final Function(String)? onChange;
+  final int maxLength;
+  final bool isLoading;
+  final bool isSmall;
+  final String placeholder;
 
   const NumericKeypad({
-    super.key,
-    required this.onSubmit,
-  });
+    Key? key,
+    this.onSubmit,
+    this.onChange,
+    this.maxLength = 5,
+    this.isLoading = false,
+    this.isSmall = false,
+    this.placeholder = 'Enter song code...',
+  }) : super(key: key);
 
   @override
   State<NumericKeypad> createState() => _NumericKeypadState();
 }
 
 class _NumericKeypadState extends State<NumericKeypad> {
-  String input = '';
-  final int maxLength = 5;
+  String _inputValue = '';
 
-  void _addDigit(String digit) {
-    if (input.length < maxLength) {
+  void _handleNumberPress(String number) {
+    if (_inputValue.length < widget.maxLength) {
       setState(() {
-        input += digit;
+        _inputValue += number;
       });
+      widget.onChange?.call(_inputValue);
     }
   }
 
-  void _deleteDigit() {
-    if (input.isNotEmpty) {
+  void _handleDelete() {
+    if (_inputValue.isNotEmpty) {
       setState(() {
-        input = input.substring(0, input.length - 1);
+        _inputValue = _inputValue.substring(0, _inputValue.length - 1);
       });
+      widget.onChange?.call(_inputValue);
     }
   }
 
-  void _clear() {
+  void _handleClear() {
     setState(() {
-      input = '';
+      _inputValue = '';
     });
+    widget.onChange?.call('');
   }
 
-  void _submit() {
-    if (input.length == maxLength) {
-      widget.onSubmit(input);
-      _clear();
+  void _handleSubmit() {
+    if (_inputValue.length == widget.maxLength) {
+      widget.onSubmit?.call(_inputValue);
+      setState(() {
+        _inputValue = '';
+      });
     }
-  }
-
-  Widget _buildButton(
-    String text, {
-    Color? textColor,
-    VoidCallback? onPressed,
-  }) {
-    return Expanded(
-      child: Padding(
-        padding: const EdgeInsets.all(4),
-        child: MaterialButton(
-          onPressed: onPressed,
-          color: Colors.black54,
-          height: 60,
-          child: Text(
-            text,
-            style: TextStyle(
-              fontSize: 24,
-              color: textColor ?? Colors.white,
-            ),
-          ),
-        ),
-      ),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final numbers = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'];
+    final buttonSize = widget.isSmall ? 40.0 : 60.0;
+
     return Container(
-      width: 400,
-      padding: const EdgeInsets.all(16),
+      width: widget.isSmall ? 300 : 400,
+      padding: EdgeInsets.all(widget.isSmall ? 12 : 24),
       decoration: BoxDecoration(
-        color: Colors.black87,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: Colors.grey.shade800,
-          width: 1,
-        ),
+        color: Colors.black.withOpacity(0.8),
+        border: Border.all(color: Colors.grey[800]!),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Digital display
+          // Digital Display
           Container(
-            height: 80,
-            margin: const EdgeInsets.only(bottom: 16),
+            height: widget.isSmall ? 48 : 96,
+            margin: EdgeInsets.only(bottom: widget.isSmall ? 16 : 24),
             padding: const EdgeInsets.symmetric(horizontal: 24),
             decoration: BoxDecoration(
               color: Colors.black,
+              border: Border.all(color: Colors.grey[700]!),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: Colors.grey.shade700,
-                width: 2,
-              ),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: List.generate(maxLength, (index) {
-                final digit = index < input.length ? input[index] : '0';
-                return Text(
-                  digit,
+              children: List.generate(
+                5,
+                (index) => Text(
+                  _inputValue.length > index ? _inputValue[index] : '0',
                   style: TextStyle(
-                    color: Colors.white.withOpacity(
-                      index < input.length ? 1 : 0.3,
-                    ),
-                    fontSize: 40,
                     fontFamily: 'monospace',
-                    fontWeight: FontWeight.bold,
+                    fontSize: widget.isSmall ? 24 : 48,
+                    color: _inputValue.length > index
+                        ? Colors.white
+                        : Colors.white.withOpacity(0.3),
+                    letterSpacing: 2,
                   ),
-                );
-              }),
-            ),
-          ),
-
-          // Number pad
-          for (int row = 0; row < 4; row++)
-            Row(
-              children: [
-                if (row < 3)
-                  for (int col = 0; col < 3; col++)
-                    _buildButton(
-                      '${row * 3 + col + 1}',
-                      onPressed: () => _addDigit('${row * 3 + col + 1}'),
-                    )
-                else ...[
-                  _buildButton(
-                    'C',
-                    textColor: Colors.red,
-                    onPressed: _clear,
-                  ),
-                  _buildButton(
-                    '0',
-                    onPressed: () => _addDigit('0'),
-                  ),
-                  _buildButton(
-                    '←',
-                    textColor: Colors.amber,
-                    onPressed: _deleteDigit,
-                  ),
-                ],
-              ],
-            ),
-
-          // Enter button
-          const SizedBox(height: 8),
-          SizedBox(
-            width: double.infinity,
-            height: 60,
-            child: MaterialButton(
-              onPressed: input.length == maxLength ? _submit : null,
-              color: Colors.blue,
-              disabledColor: Colors.blue.withOpacity(0.3),
-              child: const Text(
-                'Enter',
-                style: TextStyle(
-                  fontSize: 24,
-                  color: Colors.white,
                 ),
               ),
             ),
           ),
+
+          // Numeric Keypad
+          GridView.count(
+            shrinkWrap: true,
+            crossAxisCount: 3,
+            mainAxisSpacing: 8,
+            crossAxisSpacing: 8,
+            childAspectRatio: 1,
+            children: [
+              ...numbers.take(9).map((num) => _buildButton(
+                    text: num,
+                    onPressed: () => _handleNumberPress(num),
+                    size: buttonSize,
+                  )),
+              _buildButton(
+                text: 'C',
+                onPressed: _handleClear,
+                color: Colors.red[500],
+                size: buttonSize,
+              ),
+              _buildButton(
+                text: '0',
+                onPressed: () => _handleNumberPress('0'),
+                size: buttonSize,
+              ),
+              _buildButton(
+                text: '←',
+                onPressed: _handleDelete,
+                color: Colors.amber[500],
+                size: buttonSize,
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 16),
+
+          // Enter Button
+          SizedBox(
+            width: double.infinity,
+            height: widget.isSmall ? 48 : 64,
+            child: ElevatedButton(
+              onPressed: _inputValue.length == widget.maxLength && !widget.isLoading
+                  ? _handleSubmit
+                  : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue[600],
+                foregroundColor: Colors.white,
+                disabledBackgroundColor: Colors.blue[600]?.withOpacity(0.5),
+              ),
+              child: Text(
+                widget.isLoading ? 'Loading...' : 'Enter',
+                style: TextStyle(fontSize: widget.isSmall ? 16 : 24),
+              ),
+            ),
+          ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildButton({
+    required String text,
+    required VoidCallback onPressed,
+    Color? color,
+    required double size,
+  }) {
+    return SizedBox(
+      width: size,
+      height: size,
+      child: TextButton(
+        onPressed: widget.isLoading ? null : onPressed,
+        style: TextButton.styleFrom(
+          foregroundColor: color ?? Colors.white,
+          backgroundColor: Colors.transparent,
+          padding: EdgeInsets.zero,
+        ),
+        child: Text(
+          text,
+          style: TextStyle(
+            fontSize: widget.isSmall ? 20 : 24,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
     );
   }
