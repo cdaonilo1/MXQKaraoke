@@ -4,8 +4,8 @@ publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: ">=3.0.0 <4.0.0"
-  flutter: ">=3.13.0"
+  sdk: ">=3.7.0 <4.0.0"
+  flutter: ">=3.29.0"
 
 dependencies:
   flutter:
@@ -14,9 +14,6 @@ dependencies:
   video_player: ^2.8.2
   path_provider: ^2.1.2
   shared_preferences: ^2.2.2
-  just_audio: ^0.9.36
-  audio_session: ^0.1.18
-  # Removido flutter_midi por ser deprecated
   just_audio: ^0.9.36
   audio_session: ^0.1.18
 

@@ -2,28 +2,38 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'screens/home_screen.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  SystemChrome.setPreferredOrientations([
+  
+  // Configurar orientação para landscape
+  await SystemChrome.setPreferredOrientations([
     DeviceOrientation.landscapeLeft,
     DeviceOrientation.landscapeRight,
   ]);
-  runApp(const KaraokeApp());
+  
+  // Ocultar barra de status e navegação para modo imersivo
+  await SystemChrome.setEnabledSystemUIMode(
+    SystemUiMode.immersiveSticky,
+  );
+  
+  runApp(const MyApp());
 }
 
-class KaraokeApp extends StatelessWidget {
-  const KaraokeApp({super.key});
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'TV Box Karaoke',
+      title: 'MXQ Karaoke',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        brightness: Brightness.dark,
+      theme: ThemeData.dark().copyWith(
+        scaffoldBackgroundColor: const Color(0xFF1a2942),
         primaryColor: Colors.blue,
-        scaffoldBackgroundColor: const Color(0xFF1A2942),
-        useMaterial3: true,
+        colorScheme: const ColorScheme.dark().copyWith(
+          primary: Colors.blue,
+          secondary: Colors.amber,
+        ),
       ),
       home: const HomeScreen(),
     );

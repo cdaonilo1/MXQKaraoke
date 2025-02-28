@@ -6,10 +6,10 @@ class ParticleBackground extends StatefulWidget {
   final int particleCount;
 
   const ParticleBackground({
-    Key? key,
-    this.color = const Color(0x80FFFFFF),
+    super.key,
+    this.color = Colors.white,
     this.particleCount = 50,
-  }) : super(key: key);
+  });
 
   @override
   State<ParticleBackground> createState() => _ParticleBackgroundState();
@@ -17,49 +17,38 @@ class ParticleBackground extends StatefulWidget {
 
 class _ParticleBackgroundState extends State<ParticleBackground>
     with TickerProviderStateMixin {
-  late List<ParticleData> particles;
-  late List<AnimationController> controllers;
+  late List<AnimationController> _controllers;
+  late List<Particle> _particles;
+  final Random _random = Random();
 
   @override
   void initState() {
     super.initState();
-    _initializeParticles();
+    _initParticles();
   }
 
-  void _initializeParticles() {
-    final random = Random();
-    particles = List.generate(
+  void _initParticles() {
+    _particles = List.generate(
       widget.particleCount,
-      (i) => ParticleData(
-        id: i,
-        x: random.nextDouble() * 100,
-        y: random.nextDouble() * 100,
-        size: random.nextDouble() * 3 + 1,
+      (index) => Particle(
+        x: _random.nextDouble() * 100,
+        y: _random.nextDouble() * 100,
+        size: _random.nextDouble() * 3 + 1,
       ),
     );
 
-    controllers = particles.map((particle) {
-      return AnimationController(
-        duration: Duration(seconds: random.nextInt(10) + 10),
+    _controllers = List.generate(
+      widget.particleCount,
+      (index) => AnimationController(
+        duration: Duration(seconds: _random.nextInt(10) + 10),
         vsync: this,
-      )
-        ..forward()
-        ..addListener(() {
-          if (mounted) setState(() {});
-        })
-        ..addStatusListener((status) {
-          if (status == AnimationStatus.completed) {
-            controllers[particle.id].reverse();
-          } else if (status == AnimationStatus.dismissed) {
-            controllers[particle.id].forward();
-          }
-        });
-    }).toList();
+      )..repeat(),
+    );
   }
 
   @override
   void dispose() {
-    for (var controller in controllers) {
+    for (var controller in _controllers) {
       controller.dispose();
     }
     super.dispose();
@@ -68,54 +57,45 @@ class _ParticleBackgroundState extends State<ParticleBackground>
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Colors.black,
+      color: const Color(0xFF1a2942),
       child: Stack(
-        children: particles.map((particle) {
-          final animation = controllers[particle.id];
-          final position = Tween(
-            begin: Offset(particle.x, particle.y),
-            end: Offset(
-              particle.x + (Random().nextDouble() * 100 - 50),
-              particle.y + (Random().nextDouble() * 100 - 50),
-            ),
-          ).animate(animation);
+        children: List.generate(
+          widget.particleCount,
+          (index) => AnimatedBuilder(
+            animation: _controllers[index],
+            builder: (context, child) {
+              final value = _controllers[index].value;
+              final dx = sin(value * 2 * pi) * 50;
+              final dy = cos(value * 2 * pi) * 50;
+              final opacity = 0.3 + (sin(value * 2 * pi) + 1) / 2 * 0.4;
 
-          final opacity = Tween(
-            begin: 0.3,
-            end: 0.7,
-          ).animate(animation);
-
-          return Positioned(
-            left: position.value.dx,
-            top: position.value.dy,
-            child: Opacity(
-              opacity: opacity.value,
-              child: Container(
-                width: particle.size,
-                height: particle.size,
-                decoration: BoxDecoration(
-                  color: widget.color,
-                  shape: BoxShape.circle,
+              return Positioned(
+                left: MediaQuery.of(context).size.width * _particles[index].x / 100 + dx,
+                top: MediaQuery.of(context).size.height * _particles[index].y / 100 + dy,
+                child: Opacity(
+                  opacity: opacity,
+                  child: Container(
+                    width: _particles[index].size,
+                    height: _particles[index].size,
+                    decoration: BoxDecoration(
+                      color: widget.color.withOpacity(0.5),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
                 ),
-              ),
-            ),
-          );
-        }).toList(),
+              );
+            },
+          ),
+        ),
       ),
     );
   }
 }
 
-class ParticleData {
-  final int id;
+class Particle {
   final double x;
   final double y;
   final double size;
 
-  ParticleData({
-    required this.id,
-    required this.x,
-    required this.y,
-    required this.size,
-  });
+  Particle({required this.x, required this.y, required this.size});
 }
