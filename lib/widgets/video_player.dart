@@ -64,7 +64,8 @@ class _KaraokeVideoPlayerState extends State<KaraokeVideoPlayer> {
       });
       
     _controller.addListener(() {
-      if (_controller.value.position >= _controller.value.duration) {
+      if (_controller.value.isInitialized && 
+          _controller.value.position >= _controller.value.duration) {
         widget.onEnded?.call();
       }
     });
